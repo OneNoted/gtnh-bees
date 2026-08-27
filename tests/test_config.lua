@@ -29,6 +29,17 @@ end
 local species_array={{uid="a"},{uid="b"},{uid="c"}}
 local route={result="c",parents={"a","b"},chance=25}
 
+H.test("configuration save accepts OpenOS nil close success",function()
+  local old_open=io.open;local written={}
+  io.open=function()
+    return{write=function(_,... )for index=1,select("#",...)do written[#written+1]=tostring(select(index,...))end;return true end,flush=function()return true end,close=function()return nil end}
+  end
+  local fs={exists=function()return false end,remove=function()return true end,rename=function()return true end}
+  local survived,ok,err=pcall(Config.save,valid_config(),"/config",fs)
+  io.open=old_open
+  H.truthy(survived);H.truthy(ok,err);H.truthy(#table.concat(written)>0)
+end)
+
 H.test("generic discovery accepts contiguous arrays and deterministic string-keyed maps",function()
   local array_catalog=assert(discover(species_array,{route}))
   H.truthy(array_catalog.species.a);H.equal(array_catalog.routes[1].result,"c")

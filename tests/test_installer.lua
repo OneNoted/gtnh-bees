@@ -24,7 +24,7 @@ local function fetch_fixture(network,stored,options)
         return {
           write=function(_,chunk)chunks[#chunks+1]=chunk;return true end,
           flush=function()return true end,
-          close=function()files[path]=stored~=nil and stored or table.concat(chunks);return true end
+          close=function()files[path]=stored~=nil and stored or table.concat(chunks);if options.nil_close_success then return nil end;return true end
         }
       end
       H.equal(mode,"rb");local value=files[path]or"";local position=1;local calls=0
@@ -36,7 +36,7 @@ local function fetch_fixture(network,stored,options)
           if position>#value then return nil end
           local chunk=value:sub(position,position+amount-1);position=position+#chunk;return chunk
         end,
-        close=function()if options.close_error then return nil,"injected staged close error"end;return true end
+        close=function()if options.close_error then return nil,"injected staged close error"end;if options.nil_close_success then return nil end;return true end
       }
     end
   }
@@ -70,6 +70,11 @@ H.test("staged verifier propagates staged read and close failures",function()
   runtime=fetch_fixture("abc","abc",{close_error=true})
   ok,err=Installer.fetcher(runtime,{verify_reads=4})("u","/stage/close",{size=3,sha256=hex("abc")})
   H.falsy(ok);H.contains(err,"staged verification close failed");H.contains(err,"injected staged close error")
+end)
+
+H.test("installer accepts OpenOS nil close success for downloaded and reopened files",function()
+  local runtime=fetch_fixture("abc","abc",{nil_close_success=true})
+  H.truthy(Installer.fetcher(runtime,{verify_reads=4})("u","/stage/file",{size=3,sha256=hex("abc")}))
 end)
 
 H.test("staged verifier rejects exact stored bytes with a wrong SHA pin",function()
@@ -116,6 +121,7 @@ local function memory_fs(initial,control)
         close=function()
           files[path]=table.concat(chunks)
           if control.close and control.close(path,chunks,files)then return nil,"injected close failure"end
+          if control.nil_close_success then return nil end
           return true
         end
       }
@@ -181,6 +187,12 @@ H.test("journal phase replacement is one rename while the prior live journal exi
   local fs,files=memory_fs({["/a"]="old-a"},control)
   local ok=Transaction.install({fs=fs,root="/",manifest={{url="a",path="a"}},now=function()return 30 end,fetch=function(_,path)files[path]="new-a";return true end})
   H.truthy(ok);H.truthy(committed_replace_saw_live);H.equal(files["/a"],"new-a");H.falsy(files[journal_path]);H.falsy(files[temporary_path])
+end)
+
+H.test("transaction journals accept OpenOS nil close success",function()
+  local fs,files=memory_fs({["/a"]="old-a"},{nil_close_success=true})
+  H.truthy(Transaction.install({fs=fs,root="/",manifest={{url="a",path="a"}},now=function()return 32 end,fetch=function(_,path)files[path]="new-a";return true end}))
+  H.equal(files["/a"],"new-a");H.falsy(files[journal_path]);H.falsy(files[temporary_path])
 end)
 
 H.test("committed phase journal failures preserve the installing journal until recovery",function()

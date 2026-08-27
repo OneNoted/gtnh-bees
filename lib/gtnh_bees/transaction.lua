@@ -120,7 +120,7 @@ local function write_journal(fs,path,journal)
   end
   local close_called,closed,close_err=file_call(handle,"close")
   if not close_called then ok,write_err=nil,(write_err and(write_err.."; ")or"").."journal close failed: "..tostring(closed)
-  elseif closed==nil or closed==false then ok,write_err=nil,(write_err and(write_err.."; ")or"").."journal close failed: "..tostring(close_err)end
+  elseif closed==false or(closed==nil and close_err~=nil)then ok,write_err=nil,(write_err and(write_err.."; ")or"").."journal close failed: "..tostring(close_err)end
   if not ok then return nil,write_err or"temporary journal write failed",temporary end
   local rename_called,renamed,rename_err=pcall(fs.rename,temporary,path)
   if not rename_called then return nil,"cannot atomically replace journal "..path.." from "..temporary..": "..tostring(renamed),temporary end

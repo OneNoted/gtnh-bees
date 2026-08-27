@@ -14,7 +14,7 @@ local function valid_count(value)return type(value)=="number"and value>=0 and va
 local function checked_file_close(handle,label)
   local called,closed,close_err=pcall(function()return handle:close()end)
   if not called then return nil,label.." close failed: "..tostring(closed)end
-  if closed==nil or closed==false then return nil,label.." close failed: "..tostring(close_err)end
+  if closed==false or(closed==nil and close_err~=nil)then return nil,label.." close failed: "..tostring(close_err)end
   return true
 end
 local function verify_staged(runtime,destination,item,limits)
