@@ -115,8 +115,13 @@ M.fetcher=fetcher
 function M.run(kind,argv,runtime)
   argv=argv or {}
   local base
-  for _,arg in ipairs(argv)do local value=arg:match("^%-%-base%-url=(.+)$");if value then base=value elseif arg=="--help"or arg=="-h"then print("Usage: install-"..kind..".lua --base-url=https://approved-host/path/");return true else return nil,"unknown installer option '"..arg.."'"end end
-  if not base or not base:match("^https://")then return nil,"an HTTPS --base-url is required"end;if base:sub(-1)~="/"then base=base.."/"end
+  for _,arg in ipairs(argv)do
+    local value=arg:match("^%-%-base%-url=(.+)$")or arg:match("^(https://.+)$")
+    if value then if base then return nil,"installer base URL was supplied more than once"end;base=value
+    elseif arg=="--help"or arg=="-h"then print("Usage: install-"..kind..".lua https://approved-host/path/");return true
+    else return nil,"unknown installer option '"..arg.."'"end
+  end
+  if not base or not base:match("^https://")then return nil,"an HTTPS base URL is required"end;if base:sub(-1)~="/"then base=base.."/"end
   if not runtime then
     local component=require("component")
     local function primary(name)local ok,value=pcall(function()return component[name]end);if ok then return value end end
