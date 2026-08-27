@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lua:
+    name: Lua ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["5.2", "5.3"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua${{ matrix.version }}
+      - name: Verify generated installer launchers
+        run: python tools/build_installers.py --check
+      - name: Run tests
+        run: lua${{ matrix.version }} tests/run.lua
+      - name: Verify pinned install manifest
+        run: python tests/verify_manifest.py
+      - name: Parse Lua files
+        run: |
+          set -eu
+          git ls-files -co --exclude-standard | while IFS= read -r file; do
+            case "$file" in
+              *.lua|bin/bees|bin/bees-robot)
+                luac${{ matrix.version }} -p "$file"
+                ;;
+            esac
+          done
+      - name: Check whitespace
+        run: git diff --check

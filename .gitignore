@@ -1,0 +1,6 @@
+*.new
+*.journal
+*.py[cod]
+__pycache__/
+.gtnh-bees-stage-*
+.gtnh-bees-backup-*

@@ -1,0 +1,4 @@
+#!/usr/bin/env lua
+local argv = {...}
+local ok, err = require("gtnh_bees.robot_main").run(argv)
+if not ok then io.stderr:write(tostring(err), "\n"); os.exit(1) end
