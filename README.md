@@ -52,14 +52,14 @@ Computer:
 
 ```text
 wget -f https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/install-computer.lua install-computer.lua
-lua install-computer.lua --base-url=https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/
+install-computer.lua https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/
 ```
 
 Foundation robot:
 
 ```text
 wget -f https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/install-robot.lua install-robot.lua
-lua install-robot.lua --base-url=https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/
+install-robot.lua https://raw.githubusercontent.com/OneNoted/gtnh-bees/main/
 ```
 
 For a tagged release, replace `main` in both URLs with the same tag. Do not mix launcher and base revisions: the embedded manifest deliberately rejects files from another revision.

@@ -14,7 +14,7 @@ local function valid_count(value)return type(value)=="number"and value>=0 and va
 local function checked_file_close(handle,label)
   local called,closed,close_err=pcall(function()return handle:close()end)
   if not called then return nil,label.." close failed: "..tostring(closed)end
-  if closed==nil or closed==false then return nil,label.." close failed: "..tostring(close_err)end
+  if closed==false or(closed==nil and close_err~=nil)then return nil,label.." close failed: "..tostring(close_err)end
   return true
 end
 local function verify_staged(runtime,destination,item,limits)
@@ -114,13 +114,22 @@ end
 M.fetcher=fetcher
 function M.run(kind,argv,runtime)
   argv=argv or {}
-  if not runtime then local component=require("component");runtime={filesystem=require("filesystem"),internet=component.internet,data=component.data,computer=require("computer"),open=io.open}end
+  local base
+  for _,arg in ipairs(argv)do
+    local value=arg:match("^%-%-base%-url=(.+)$")or arg:match("^(https://.+)$")
+    if value then if base then return nil,"installer base URL was supplied more than once"end;base=value
+    elseif arg=="--help"or arg=="-h"then print("Usage: install-"..kind..".lua https://approved-host/path/");return true
+    else return nil,"unknown installer option '"..arg.."'"end
+  end
+  if not base or not base:match("^https://")then return nil,"an HTTPS base URL is required"end;if base:sub(-1)~="/"then base=base.."/"end
+  if not runtime then
+    local component=require("component")
+    local function primary(name)local ok,value=pcall(function()return component[name]end);if ok then return value end end
+    runtime={filesystem=require("filesystem"),internet=primary("internet"),data=primary("data"),computer=require("computer"),open=io.open}
+  end
   runtime.open=runtime.open or io.open
   if not runtime.internet then return nil,"an internet card is required"end
-  if not runtime.data or not Calls.callable(runtime.data.sha256)then return nil,"a data card providing SHA-256 is required for pinned release validation"end
-  local base
-  for _,arg in ipairs(argv)do local value=arg:match("^%-%-base%-url=(.+)$");if value then base=value elseif arg=="--help"or arg=="-h"then print("Usage: install-"..kind..".lua --base-url=https://approved-host/path/");return true else return nil,"unknown installer option '"..arg.."'"end end
-  if not base or not base:match("^https://")then return nil,"an HTTPS --base-url is required"end;if base:sub(-1)~="/"then base=base.."/"end
+  if not runtime.data or not Calls.callable(runtime.data.sha256)then return nil,"a tier-2-or-better data card providing SHA-256 is required for pinned release validation"end
   local manifest=kind=="robot"and Manifest.robot(base)or Manifest.computer(base)
   local ok,backup_or_err=Transaction.install({fs=fs_wrapper(runtime.filesystem),fetch=fetcher(runtime,runtime.deadlines),root="/",manifest=manifest})
   if not ok then return nil,backup_or_err end

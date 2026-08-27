@@ -167,8 +167,9 @@ function Config.save(config, path, filesystem)
   if not handle then return nil, open_err end
   local ok, write_err = handle:write("return ", serialize(config), "\n")
   if ok then ok,write_err=handle:flush() end
-  local closed,close_err=handle:close()
-  if not ok or closed==nil then filesystem.remove(temporary); return nil, write_err or close_err or "configuration flush/close failed" end
+  local close_called,closed,close_err=pcall(function()return handle:close()end)
+  local close_failed=not close_called or closed==false or(closed==nil and close_err~=nil)
+  if not ok or close_failed then filesystem.remove(temporary);return nil,write_err or(not close_called and closed)or close_err or"configuration flush/close failed"end
   if filesystem.exists(path) then
     filesystem.remove(path .. ".previous")
     local moved, move_err = filesystem.rename(path, path .. ".previous")
