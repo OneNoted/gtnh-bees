@@ -40,7 +40,9 @@ def render(kind: str) -> str:
         )
     chunks.extend(
         (
-            f'local ok,err=require("gtnh_bees.installer").run("{kind}",{{...}})\n',
+            'local argv={...}\n',
+            'if #argv==0 and type(arg)=="table"then for index=1,#arg do argv[#argv+1]=arg[index]end end\n',
+            f'local ok,err=require("gtnh_bees.installer").run("{kind}",argv)\n',
             'if not ok then io.stderr:write("Install failed: ",tostring(err),"\\n");os.exit(1)end\n',
         )
     )

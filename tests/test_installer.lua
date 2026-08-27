@@ -207,7 +207,7 @@ H.test("committed phase journal failures preserve the installing journal until r
   end
 end)
 
-local function verify_self_contained_launcher(path)
+local function verify_self_contained_launcher(path,use_global_arg)
   local file=assert(io.open(path,"r"));local shebang=file:read("*l");file:close();H.equal(shebang,"#!/usr/bin/lua")
   local names={
     "gtnh_bees.component_call","gtnh_bees.transaction","gtnh_bees.install_manifest","gtnh_bees.installer",
@@ -228,7 +228,12 @@ local function verify_self_contained_launcher(path)
   print=function(message)messages[#messages+1]=tostring(message)end
   local chunk,load_err=loadfile(path)
   local called,run_err=false,load_err
-  if chunk then called,run_err=pcall(chunk,"--help")end
+  local old_arg=_G.arg
+  if use_global_arg then _G.arg={[0]=path,[1]="--help"}end
+  if chunk then
+    if use_global_arg then called,run_err=pcall(chunk)else called,run_err=pcall(chunk,"--help")end
+  end
+  _G.arg=old_arg
   local bundled=type(package.loaded["gtnh_bees.installer"])=="table"and package.loaded["gtnh_bees.installer"].stale~=true
   package.path,print=old_path,old_print
   for _,name in ipairs(names)do
@@ -242,6 +247,11 @@ end
 H.test("generated launchers bootstrap without checkout or installed modules",function()
   verify_self_contained_launcher("install-computer.lua")
   verify_self_contained_launcher("install-robot.lua")
+end)
+
+H.test("generated launchers accept OpenOS lua global script arguments",function()
+  verify_self_contained_launcher("install-computer.lua",true)
+  verify_self_contained_launcher("install-robot.lua",true)
 end)
 
 H.test("installer reports an absent primary data card without unwinding",function()

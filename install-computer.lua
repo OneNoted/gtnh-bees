@@ -495,5 +495,7 @@ function M.run(kind,argv,runtime)
 end
 return M
 end
-local ok,err=require("gtnh_bees.installer").run("computer",{...})
+local argv={...}
+if #argv==0 and type(arg)=="table"then for index=1,#arg do argv[#argv+1]=arg[index]end end
+local ok,err=require("gtnh_bees.installer").run("computer",argv)
 if not ok then io.stderr:write("Install failed: ",tostring(err),"\n");os.exit(1)end
