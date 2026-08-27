@@ -208,6 +208,7 @@ H.test("committed phase journal failures preserve the installing journal until r
 end)
 
 local function verify_self_contained_launcher(path)
+  local file=assert(io.open(path,"r"));local shebang=file:read("*l");file:close();H.equal(shebang,"#!/usr/bin/lua")
   local names={
     "gtnh_bees.component_call","gtnh_bees.transaction","gtnh_bees.install_manifest","gtnh_bees.installer",
     "component","filesystem","computer"
@@ -241,6 +242,16 @@ end
 H.test("generated launchers bootstrap without checkout or installed modules",function()
   verify_self_contained_launcher("install-computer.lua")
   verify_self_contained_launcher("install-robot.lua")
+end)
+
+H.test("installer reports an absent primary data card without unwinding",function()
+  local names={"component","filesystem","computer"};local saved={}
+  for _,name in ipairs(names)do saved[name]=package.loaded[name]end
+  package.loaded.component=setmetatable({internet={}},{__index=function(_,name)error("no primary '"..name.."' available")end})
+  package.loaded.filesystem={};package.loaded.computer={}
+  local survived,ok,err=pcall(Installer.run,"computer",{"--base-url=https://release/"})
+  for _,name in ipairs(names)do package.loaded[name]=saved[name]end
+  H.truthy(survived);H.falsy(ok);H.contains(err,"tier-2-or-better data card")
 end)
 
 return H
